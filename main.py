@@ -15,11 +15,12 @@ PALETTE = [
     (120,80,40),   # 4 brown base
     (150,100,60),  # 5 light brown lumps
     (220,220,255), # 6 very dim white (stars base)
-    (200,200,220), # 7 slightly brighter twinkling star
+    (200,200,220), # 7 old mid-bright (unused now)
+    (255,255,255), # 8 full bright white – new stronger twinkle peak
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v22: Twinkling Stars")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v23: Stronger Twinkling Stars")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -30,16 +31,16 @@ hills_offset = 0
 ground_offset = 0
 scroll_direction = 0
 
-# Static starfield with twinkling
+# Static starfield with stronger twinkling
 stars = []
-twinklers = []  # Subset that twinkle
 random.seed(42)
 for i in range(120):
     x = random.randint(0, WIDTH - 1)
     y = random.randint(0, 100)
     base_bright = 6  # PALETTE[6] dim
     size = random.choice([1, 1, 2])
-    phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None  # 30% chance to twinkle
+    # 30% chance to twinkle
+    phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
     stars.append((x, y, base_bright, size, phase))
 
 running = True
@@ -61,7 +62,7 @@ while running:
 
     frame_count += 1
 
-    # Integer parallax updates
+    # Integer parallax updates (unchanged from v21)
     if scroll_direction != 0:
         if frame_count % 8 == 0:
             mountains_offset += scroll_direction
@@ -72,12 +73,13 @@ while running:
 
     low_res.fill(PALETTE[0])
 
-    # Draw twinkling stars (fixed positions)
-    current_time = pygame.time.get_ticks() * 0.001  # seconds for smooth animation
+    # Draw stars with stronger twinkle
+    current_time = pygame.time.get_ticks() * 0.001  # seconds
     for x, y, base_bright, size, phase in stars:
         if phase is not None:  # Twinkler
-            flicker = 0.5 + 0.5 * math.sin(current_time * 2 + phase)  # 0.0 to 1.0 pulse
-            bright_idx = 7 if flicker > 0.5 else 6
+            # Faster and stronger pulse: 0.0 → 1.0 → 0.0
+            flicker = 0.5 + 0.5 * math.sin(current_time * 3 + phase)  # *3 = quicker cycle
+            bright_idx = 8 if flicker > 0.4 else 6  # clear jump to full white
         else:
             bright_idx = base_bright
         pygame.draw.rect(low_res, PALETTE[bright_idx], (x, y, size, size))
