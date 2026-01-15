@@ -14,12 +14,12 @@ PALETTE = [
     (90,130,90),   # 3 mid green
     (120,80,40),   # 4 brown base
     (150,100,60),  # 5 light brown lumps
-    (220,220,255), # 6 very dim white (stars)
-    (200,200,220), # 7 slightly brighter star
+    (220,220,255), # 6 very dim white (stars base)
+    (200,200,220), # 7 slightly brighter twinkling star
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v21: Scrolling Halved Again (1/8 Original)")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v22: Twinkling Stars")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -28,16 +28,19 @@ frame_count = 0
 mountains_offset = 0
 hills_offset = 0
 ground_offset = 0
+scroll_direction = 0
 
-# Static starfield
+# Static starfield with twinkling
 stars = []
+twinklers = []  # Subset that twinkle
 random.seed(42)
-for _ in range(120):
+for i in range(120):
     x = random.randint(0, WIDTH - 1)
     y = random.randint(0, 100)
-    brightness = random.choice([6, 6, 6, 7])
-    size = 1 if brightness == 6 else 2
-    stars.append((x, y, brightness, size))
+    base_bright = 6  # PALETTE[6] dim
+    size = random.choice([1, 1, 2])
+    phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None  # 30% chance to twinkle
+    stars.append((x, y, base_bright, size, phase))
 
 running = True
 while running:
@@ -53,26 +56,31 @@ while running:
                 scroll_direction = 1
         elif event.type == pygame.KEYUP:
             if event.key in (pygame.K_LEFT, pygame.K_RIGHT):
-                if not (pygame.key.get_pressed()[pygame.K_LEFT] or pygame.key.get_pressed()[pygame.K_RIGHT]):
-                    scroll_direction = 0
+                keys = pygame.key.get_pressed()
+                scroll_direction = -1 if keys[pygame.K_LEFT] else (1 if keys[pygame.K_RIGHT] else 0)
 
     frame_count += 1
 
-    # Apply direction only when key held
-    if 'scroll_direction' in locals() and scroll_direction != 0:
-        # Quarter-speed layering – integer steps only
+    # Integer parallax updates
+    if scroll_direction != 0:
         if frame_count % 8 == 0:
-            mountains_offset += scroll_direction * 1   # ~0.125 px/frame
+            mountains_offset += scroll_direction
         if frame_count % 4 == 0:
-            hills_offset += scroll_direction * 1       # ~0.25 px/frame
+            hills_offset += scroll_direction
         if frame_count % 2 == 0:
-            ground_offset += scroll_direction * 1      # ~0.5 px/frame
+            ground_offset += scroll_direction
 
     low_res.fill(PALETTE[0])
 
-    # Static stars
-    for x, y, pal_idx, sz in stars:
-        pygame.draw.rect(low_res, PALETTE[pal_idx], (x, y, sz, sz))
+    # Draw twinkling stars (fixed positions)
+    current_time = pygame.time.get_ticks() * 0.001  # seconds for smooth animation
+    for x, y, base_bright, size, phase in stars:
+        if phase is not None:  # Twinkler
+            flicker = 0.5 + 0.5 * math.sin(current_time * 2 + phase)  # 0.0 to 1.0 pulse
+            bright_idx = 7 if flicker > 0.5 else 6
+        else:
+            bright_idx = base_bright
+        pygame.draw.rect(low_res, PALETTE[bright_idx], (x, y, size, size))
 
     # Distant mountains
     for px in range(-80, WIDTH + 80):
@@ -90,20 +98,20 @@ while running:
         world_x = px + hills_offset
         h = 32 * math.sin(world_x * 0.04) + 24 * math.sin(world_x * 0.075 + 1.8)
         y = 138 + int(h)
-        col = PALETTE[2] if h > -8 else PALETTE[3]
+        col_idx = 2 if h > -8 else 3
         screen_x = int(px)
         if 0 <= screen_x < WIDTH:
-            pygame.draw.rect(low_res, col, (screen_x, y, 1, HEIGHT - y + 50))
+            pygame.draw.rect(low_res, PALETTE[col_idx], (screen_x, y, 1, HEIGHT - y + 50))
 
-    # Brown lumpy ground – lowered
+    # Brown lumpy ground
     for px in range(-80, WIDTH + 80):
         world_x = px + ground_offset
         lump = 7 * math.sin(world_x * 0.09) + 5 * math.cos(world_x * 0.16)
         y = 200 + int(lump)
-        col = PALETTE[5] if lump > 0 else PALETTE[4]
+        col_idx = 5 if lump > 0 else 4
         screen_x = int(px)
         if 0 <= screen_x < WIDTH:
-            pygame.draw.rect(low_res, col, (screen_x, y, 1, HEIGHT - y + 10))
+            pygame.draw.rect(low_res, PALETTE[col_idx], (screen_x, y, 1, HEIGHT - y + 10))
 
     pygame.transform.scale(low_res, win.get_size(), win)
     pygame.display.flip()
@@ -111,4 +119,3 @@ while running:
 
 pygame.quit()
 sys.exit()
-
