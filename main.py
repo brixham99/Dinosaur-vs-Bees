@@ -8,19 +8,19 @@ SCALE = 4
 FPS = 60
 
 PALETTE = [
-    (0,0,0),       # 0 sky / background
-    (40,40,40),    # 1 distant peaks
-    (60,100,60),   # 2 dark green
-    (90,130,90),   # 3 mid green
-    (120,80,40),   # 4 brown base
-    (150,100,60),  # 5 light brown lumps
-    (220,220,255), # 6 very dim white (stars base)
-    (200,200,220), # 7 old mid-bright (unused now)
-    (255,255,255), # 8 full bright white – new stronger twinkle peak
+    (0,0,0),          # 0 sky / background
+    (40,40,40),       # 1 distant peaks
+    (60,100,60),      # 2 dark green
+    (90,130,90),      # 3 mid green
+    (120,80,40),      # 4 brown base
+    (150,100,60),     # 5 light brown lumps
+    (30,30,40),       # 6 very dark gray – new dull state for twinklers
+    (255,255,255),    # 7 full bright white – strong twinkle peak
+    (200,200,220),    # 8 unused / legacy mid
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v23: Stronger Twinkling Stars")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v24: Pronounced Twinkling (Near-Black Dull)")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -31,13 +31,13 @@ hills_offset = 0
 ground_offset = 0
 scroll_direction = 0
 
-# Static starfield with stronger twinkling
+# Static starfield with pronounced twinkling
 stars = []
 random.seed(42)
 for i in range(120):
     x = random.randint(0, WIDTH - 1)
     y = random.randint(0, 100)
-    base_bright = 6  # PALETTE[6] dim
+    base_bright = 6  # PALETTE[6] near-black dull
     size = random.choice([1, 1, 2])
     # 30% chance to twinkle
     phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
@@ -62,7 +62,7 @@ while running:
 
     frame_count += 1
 
-    # Integer parallax updates (unchanged from v21)
+    # Integer parallax updates (unchanged)
     if scroll_direction != 0:
         if frame_count % 8 == 0:
             mountains_offset += scroll_direction
@@ -73,13 +73,12 @@ while running:
 
     low_res.fill(PALETTE[0])
 
-    # Draw stars with stronger twinkle
-    current_time = pygame.time.get_ticks() * 0.001  # seconds
+    # Draw stars with strong contrast twinkle
+    current_time = pygame.time.get_ticks() * 0.001
     for x, y, base_bright, size, phase in stars:
         if phase is not None:  # Twinkler
-            # Faster and stronger pulse: 0.0 → 1.0 → 0.0
-            flicker = 0.5 + 0.5 * math.sin(current_time * 3 + phase)  # *3 = quicker cycle
-            bright_idx = 8 if flicker > 0.4 else 6  # clear jump to full white
+            flicker = 0.5 + 0.5 * math.sin(current_time * 2.8 + phase)  # slightly faster cycle
+            bright_idx = 7 if flicker > 0.35 else 6  # clear jump to full white
         else:
             bright_idx = base_bright
         pygame.draw.rect(low_res, PALETTE[bright_idx], (x, y, size, size))
