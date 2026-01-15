@@ -14,13 +14,13 @@ PALETTE = [
     (90,130,90),      # 3 mid green
     (120,80,40),      # 4 brown base
     (150,100,60),     # 5 light brown lumps
-    (30,30,40),       # 6 very dark gray – new dull state for twinklers
-    (255,255,255),    # 7 full bright white – strong twinkle peak
-    (200,200,220),    # 8 unused / legacy mid
+    (30,30,40),       # 6 very dark gray – dull state for twinklers
+    (180,180,220),    # 7 brighter base for non-twinkling stars
+    (255,255,255),    # 8 full bright white – twinkle peak
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v24: Pronounced Twinkling (Near-Black Dull)")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v25: Brighter Non-Twinkling Stars")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -31,15 +31,14 @@ hills_offset = 0
 ground_offset = 0
 scroll_direction = 0
 
-# Static starfield with pronounced twinkling
+# Static starfield
 stars = []
 random.seed(42)
 for i in range(120):
     x = random.randint(0, WIDTH - 1)
     y = random.randint(0, 100)
-    base_bright = 6  # PALETTE[6] near-black dull
+    base_bright = 7  # PALETTE[7] – brighter for non-twinklers
     size = random.choice([1, 1, 2])
-    # 30% chance to twinkle
     phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
     stars.append((x, y, base_bright, size, phase))
 
@@ -62,7 +61,6 @@ while running:
 
     frame_count += 1
 
-    # Integer parallax updates (unchanged)
     if scroll_direction != 0:
         if frame_count % 8 == 0:
             mountains_offset += scroll_direction
@@ -73,14 +71,14 @@ while running:
 
     low_res.fill(PALETTE[0])
 
-    # Draw stars with strong contrast twinkle
+    # Draw stars – non-twinklers brighter, twinklers still strong contrast
     current_time = pygame.time.get_ticks() * 0.001
     for x, y, base_bright, size, phase in stars:
         if phase is not None:  # Twinkler
-            flicker = 0.5 + 0.5 * math.sin(current_time * 2.8 + phase)  # slightly faster cycle
-            bright_idx = 7 if flicker > 0.35 else 6  # clear jump to full white
+            flicker = 0.5 + 0.5 * math.sin(current_time * 2.8 + phase)
+            bright_idx = 8 if flicker > 0.35 else 6  # near-black → full white
         else:
-            bright_idx = base_bright
+            bright_idx = base_bright  # brighter constant
         pygame.draw.rect(low_res, PALETTE[bright_idx], (x, y, size, size))
 
     # Distant mountains
