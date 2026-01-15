@@ -20,7 +20,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v25: Brighter Non-Twinkling Stars")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v26: Gentler Peaks (-40% amplitude)")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -37,7 +37,7 @@ random.seed(42)
 for i in range(120):
     x = random.randint(0, WIDTH - 1)
     y = random.randint(0, 100)
-    base_bright = 7  # PALETTE[7] – brighter for non-twinklers
+    base_bright = 7
     size = random.choice([1, 1, 2])
     phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
     stars.append((x, y, base_bright, size, phase))
@@ -71,14 +71,14 @@ while running:
 
     low_res.fill(PALETTE[0])
 
-    # Draw stars – non-twinklers brighter, twinklers still strong contrast
+    # Draw stars
     current_time = pygame.time.get_ticks() * 0.001
     for x, y, base_bright, size, phase in stars:
-        if phase is not None:  # Twinkler
+        if phase is not None:
             flicker = 0.5 + 0.5 * math.sin(current_time * 2.8 + phase)
-            bright_idx = 8 if flicker > 0.35 else 6  # near-black → full white
+            bright_idx = 8 if flicker > 0.35 else 6
         else:
-            bright_idx = base_bright  # brighter constant
+            bright_idx = base_bright
         pygame.draw.rect(low_res, PALETTE[bright_idx], (x, y, size, size))
 
     # Distant mountains
@@ -92,20 +92,20 @@ while running:
         if 0 <= screen_x < WIDTH:
             pygame.draw.rect(low_res, PALETTE[1], (screen_x, mountain_y, 1, HEIGHT - mountain_y))
 
-    # Green hills
+    # Green hills – 40% gentler peaks
     for px in range(-80, WIDTH + 80):
         world_x = px + hills_offset
-        h = 32 * math.sin(world_x * 0.04) + 24 * math.sin(world_x * 0.075 + 1.8)
+        h = 19.2 * math.sin(world_x * 0.04) + 14.4 * math.sin(world_x * 0.075 + 1.8)  # reduced 40%
         y = 138 + int(h)
         col_idx = 2 if h > -8 else 3
         screen_x = int(px)
         if 0 <= screen_x < WIDTH:
             pygame.draw.rect(low_res, PALETTE[col_idx], (screen_x, y, 1, HEIGHT - y + 50))
 
-    # Brown lumpy ground
+    # Brown lumpy ground – 40% gentler lumps
     for px in range(-80, WIDTH + 80):
         world_x = px + ground_offset
-        lump = 7 * math.sin(world_x * 0.09) + 5 * math.cos(world_x * 0.16)
+        lump = 4.2 * math.sin(world_x * 0.09) + 3.0 * math.cos(world_x * 0.16)  # reduced 40%
         y = 200 + int(lump)
         col_idx = 5 if lump > 0 else 4
         screen_x = int(px)
