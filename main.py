@@ -25,7 +25,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28: 4 Levels")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.2: Bee Speed Halved All Levels")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -61,8 +61,9 @@ class Bee(pygame.sprite.Sprite):
         self.image = self.original_image
         self.rect = self.image.get_rect()
         self.reset_position()
-        self.vx = random.uniform(-4, -2) * speed_mult
-        self.vy = random.uniform(-1.5, 1.5) * speed_mult
+        # Halved speed ranges (base before multiplier)
+        self.vx = random.uniform(-2, -1) * speed_mult
+        self.vy = random.uniform(-0.75, 0.75) * speed_mult
         self.flip_timer = random.randint(90, 180)
         self.wander_timer = random.randint(30, 60)
         self.flipped = False
@@ -91,8 +92,8 @@ class Bee(pygame.sprite.Sprite):
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-4, -2) * self.vx / abs(self.vx)  # preserve direction sign
-            self.vy = random.uniform(-1.5, 1.5)
+            self.vx = random.uniform(-2, -1) * self.vx / abs(self.vx)  # preserve direction sign
+            self.vy = random.uniform(-0.75, 0.75)
             self.flipped = False
             self.image = self.original_image
 
@@ -189,7 +190,7 @@ while running:
         # Solid light grey sky
         low_res.fill((211,211,211))
 
-    elif current_level = 4:
+    elif current_level == 4:
         # Red sky gradient
         for y in range(HEIGHT):
             t = y / HEIGHT
