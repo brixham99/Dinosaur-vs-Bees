@@ -202,3 +202,57 @@ while running:
         # Red sky gradient
         for y in range(HEIGHT):
             t = y / HEIGHT
+            col = (
+                int(200 + (255-200)*t),
+                int(0 + (100-0)*t),
+                int(0 + (50-0)*t)
+            )
+            pygame.draw.line(low_res, col, (0,y), (WIDTH,y))
+        # White moon top-right
+        moon_center = (WIDTH - 50, 50)
+        pygame.draw.circle(low_res, (240,240,240), moon_center, 28)
+        pygame.draw.circle(low_res, (220,220,220), moon_center, 22)
+
+    # ── Parallax layers ────────────────────────────────────────────
+    for px in range(-80, WIDTH + 80):
+        world_x = px + mountains_offset
+        h1 = 50 * math.sin(world_x * 0.008)
+        h2 = 35 * math.sin(world_x * 0.022 + 1.2)
+        h3 = 18 * math.sin(world_x * 0.045 + 3.0)
+        mountain_y = 55 + int(h1 + h2 + h3)
+        screen_x = int(px)
+        if 0 <= screen_x < WIDTH and mountain_y < HEIGHT:
+            pygame.draw.rect(low_res, PALETTE[1], (screen_x, mountain_y, 1, HEIGHT - mountain_y))
+
+    for px in range(-80, WIDTH + 80):
+        world_x = px + hills_offset
+        h = 19.2 * math.sin(world_x * 0.04) + 14.4 * math.sin(world_x * 0.075 + 1.8)
+        y = 138 + int(h)
+        col_idx = 2 if h > -8 else 3
+        screen_x = int(px)
+        if 0 <= screen_x < WIDTH:
+            pygame.draw.rect(low_res, PALETTE[col_idx], (screen_x, y, 1, HEIGHT - y + 50))
+
+    for px in range(-80, WIDTH + 80):
+        world_x = px + ground_offset
+        lump = 4.2 * math.sin(world_x * 0.09) + 3.0 * math.cos(world_x * 0.16)
+        y = 200 + int(lump)
+        col_idx = 5 if lump > 0 else 4
+        screen_x = int(px)
+        if 0 <= screen_x < WIDTH:
+            pygame.draw.rect(low_res, PALETTE[col_idx], (screen_x, y, 1, HEIGHT - y + 10))
+
+    # ── Bees ────────────────────────────────────────────────────────
+    bees.update()
+    bees.draw(low_res)
+
+    # ── Level indicator ─────────────────────────────────────────────
+    level_text = font.render(f"Level {current_level}", True, (255,255,255))
+    low_res.blit(level_text, (WIDTH - level_text.get_width() - 8, HEIGHT - level_text.get_height() - 4))
+
+    pygame.transform.scale(low_res, win.get_size(), win)
+    pygame.display.flip()
+    clock.tick(FPS)
+
+pygame.quit()
+sys.exit()
