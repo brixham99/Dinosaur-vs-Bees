@@ -25,7 +25,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.2: Bee Speed Halved All Levels")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.3: Bee Speed Symmetry (Left = Right)")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -50,7 +50,7 @@ scroll_direction = 0
 current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class
+# Bee sprite class – FIXED: same speed magnitude left & right
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -61,12 +61,18 @@ class Bee(pygame.sprite.Sprite):
         self.image = self.original_image
         self.rect = self.image.get_rect()
         self.reset_position()
-        # Halved speed ranges (base before multiplier)
-        self.vx = random.uniform(-2, -1) * speed_mult
+        
+        # Choose random SPEED magnitude, then random DIRECTION
+        base_speed = random.uniform(1.0, 2.0) * speed_mult
+        self.speed = base_speed  # absolute speed preserved across flips
+        self.vx = base_speed if random.random() < 0.5 else -base_speed  # random initial direction
         self.vy = random.uniform(-0.75, 0.75) * speed_mult
         self.flip_timer = random.randint(90, 180)
         self.wander_timer = random.randint(30, 60)
-        self.flipped = False
+        self.flipped = self.vx < 0  # initial flip state based on direction
+
+        # Set initial image orientation
+        self.image = pygame.transform.flip(self.original_image, self.flipped, False)
 
     def reset_position(self):
         self.rect.x = WIDTH + random.randint(20, 100)
@@ -80,7 +86,7 @@ class Bee(pygame.sprite.Sprite):
         if self.flip_timer <= 0:
             self.flipped = not self.flipped
             self.image = pygame.transform.flip(self.original_image, self.flipped, False)
-            self.vx = -self.vx
+            self.vx = -self.vx  # reverse direction but KEEP SAME SPEED
             self.flip_timer = random.randint(90, 180)
 
         self.wander_timer -= 1
@@ -89,13 +95,15 @@ class Bee(pygame.sprite.Sprite):
             self.vy = max(-2.0, min(2.0, self.vy))
             self.wander_timer = random.randint(30, 60)
 
+        # Respawn if off-screen
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-2, -1) * self.vx / abs(self.vx)  # preserve direction sign
+            # On respawn, keep same speed magnitude but random direction again
+            self.vx = self.speed if random.random() < 0.5 else -self.speed
             self.vy = random.uniform(-0.75, 0.75)
-            self.flipped = False
-            self.image = self.original_image
+            self.flipped = self.vx < 0
+            self.image = pygame.transform.flip(self.original_image, self.flipped, False)
 
 # ────────────────────────────────────────────────────────────────
 # Create bees for current level
@@ -194,57 +202,3 @@ while running:
         # Red sky gradient
         for y in range(HEIGHT):
             t = y / HEIGHT
-            col = (
-                int(200 + (255-200)*t),
-                int(0 + (100-0)*t),
-                int(0 + (50-0)*t)
-            )
-            pygame.draw.line(low_res, col, (0,y), (WIDTH,y))
-        # White moon top-right
-        moon_center = (WIDTH - 50, 50)
-        pygame.draw.circle(low_res, (240,240,240), moon_center, 28)
-        pygame.draw.circle(low_res, (220,220,220), moon_center, 22)
-
-    # ── Parallax layers ────────────────────────────────────────────
-    for px in range(-80, WIDTH + 80):
-        world_x = px + mountains_offset
-        h1 = 50 * math.sin(world_x * 0.008)
-        h2 = 35 * math.sin(world_x * 0.022 + 1.2)
-        h3 = 18 * math.sin(world_x * 0.045 + 3.0)
-        mountain_y = 55 + int(h1 + h2 + h3)
-        screen_x = int(px)
-        if 0 <= screen_x < WIDTH and mountain_y < HEIGHT:
-            pygame.draw.rect(low_res, PALETTE[1], (screen_x, mountain_y, 1, HEIGHT - mountain_y))
-
-    for px in range(-80, WIDTH + 80):
-        world_x = px + hills_offset
-        h = 19.2 * math.sin(world_x * 0.04) + 14.4 * math.sin(world_x * 0.075 + 1.8)
-        y = 138 + int(h)
-        col_idx = 2 if h > -8 else 3
-        screen_x = int(px)
-        if 0 <= screen_x < WIDTH:
-            pygame.draw.rect(low_res, PALETTE[col_idx], (screen_x, y, 1, HEIGHT - y + 50))
-
-    for px in range(-80, WIDTH + 80):
-        world_x = px + ground_offset
-        lump = 4.2 * math.sin(world_x * 0.09) + 3.0 * math.cos(world_x * 0.16)
-        y = 200 + int(lump)
-        col_idx = 5 if lump > 0 else 4
-        screen_x = int(px)
-        if 0 <= screen_x < WIDTH:
-            pygame.draw.rect(low_res, PALETTE[col_idx], (screen_x, y, 1, HEIGHT - y + 10))
-
-    # ── Bees ────────────────────────────────────────────────────────
-    bees.update()
-    bees.draw(low_res)
-
-    # ── Level indicator ─────────────────────────────────────────────
-    level_text = font.render(f"Level {current_level}", True, (255,255,255))
-    low_res.blit(level_text, (WIDTH - level_text.get_width() - 8, HEIGHT - level_text.get_height() - 4))
-
-    pygame.transform.scale(low_res, win.get_size(), win)
-    pygame.display.flip()
-    clock.tick(FPS)
-
-pygame.quit()
-sys.exit()
