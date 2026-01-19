@@ -25,7 +25,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.4: Faster Ground + Bees Relative to Ground")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.5: Bee Respawn Fixed")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -50,7 +50,7 @@ scroll_direction = 0
 current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class – moves in world space (relative to ground)
+# Bee sprite class – FIXED: respawn uses self.speed_mult
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -60,6 +60,7 @@ class Bee(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
         self.image = self.original_image
         self.rect = self.image.get_rect()
+        self.speed_mult = speed_mult  # SAVE it for respawn
         self.reset_position()
         self.vx = random.uniform(-4, -2) * speed_mult
         self.vy = random.uniform(-1.5, 1.5) * speed_mult
@@ -68,18 +69,14 @@ class Bee(pygame.sprite.Sprite):
         self.flipped = False
 
     def reset_position(self):
-        # Spawn off right side of current view (in world space)
         self.world_x = ground_offset + WIDTH + random.randint(20, 100)
         self.world_y = random.randint(80, 180)
         self.rect.x = int(self.world_x - ground_offset)
         self.rect.y = int(self.world_y)
 
     def update(self):
-        # Move in world space
         self.world_x += self.vx
         self.world_y += self.vy
-
-        # Screen position relative to ground scroll
         self.rect.x = int(self.world_x - ground_offset)
         self.rect.y = int(self.world_y)
 
@@ -96,12 +93,11 @@ class Bee(pygame.sprite.Sprite):
             self.vy = max(-2.0, min(2.0, self.vy))
             self.wander_timer = random.randint(30, 60)
 
-        # Respawn if off-screen (in screen space)
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-4, -2) * speed_mult
-            self.vy = random.uniform(-1.5, 1.5) * speed_mult
+            self.vx = random.uniform(-4, -2) * self.speed_mult  # use saved self.speed_mult
+            self.vy = random.uniform(-1.5, 1.5) * self.speed_mult
             self.flipped = False
             self.image = self.original_image
 
@@ -161,7 +157,7 @@ while running:
             mountains_offset += scroll_direction
         if frame_count % 4 == 0:
             hills_offset += scroll_direction
-        ground_offset += scroll_direction   # DOUBLED: now every frame
+        ground_offset += scroll_direction   # doubled speed (every frame)
 
     low_res.fill((0,0,0))
 
