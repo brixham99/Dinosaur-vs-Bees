@@ -25,7 +25,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.2: Bee Speed Halved All Levels")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.4: Faster Ground + Bees Relative to Ground")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -50,7 +50,7 @@ scroll_direction = 0
 current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class
+# Bee sprite class – moves in world space (relative to ground)
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -61,20 +61,27 @@ class Bee(pygame.sprite.Sprite):
         self.image = self.original_image
         self.rect = self.image.get_rect()
         self.reset_position()
-        # Halved speed ranges (base before multiplier)
-        self.vx = random.uniform(-2, -1) * speed_mult
-        self.vy = random.uniform(-0.75, 0.75) * speed_mult
+        self.vx = random.uniform(-4, -2) * speed_mult
+        self.vy = random.uniform(-1.5, 1.5) * speed_mult
         self.flip_timer = random.randint(90, 180)
         self.wander_timer = random.randint(30, 60)
         self.flipped = False
 
     def reset_position(self):
-        self.rect.x = WIDTH + random.randint(20, 100)
-        self.rect.y = random.randint(80, 180)
+        # Spawn off right side of current view (in world space)
+        self.world_x = ground_offset + WIDTH + random.randint(20, 100)
+        self.world_y = random.randint(80, 180)
+        self.rect.x = int(self.world_x - ground_offset)
+        self.rect.y = int(self.world_y)
 
     def update(self):
-        self.rect.x += self.vx
-        self.rect.y += self.vy
+        # Move in world space
+        self.world_x += self.vx
+        self.world_y += self.vy
+
+        # Screen position relative to ground scroll
+        self.rect.x = int(self.world_x - ground_offset)
+        self.rect.y = int(self.world_y)
 
         self.flip_timer -= 1
         if self.flip_timer <= 0:
@@ -89,11 +96,12 @@ class Bee(pygame.sprite.Sprite):
             self.vy = max(-2.0, min(2.0, self.vy))
             self.wander_timer = random.randint(30, 60)
 
+        # Respawn if off-screen (in screen space)
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-2, -1) * self.vx / abs(self.vx)  # preserve direction sign
-            self.vy = random.uniform(-0.75, 0.75)
+            self.vx = random.uniform(-4, -2) * speed_mult
+            self.vy = random.uniform(-1.5, 1.5) * speed_mult
             self.flipped = False
             self.image = self.original_image
 
@@ -153,14 +161,12 @@ while running:
             mountains_offset += scroll_direction
         if frame_count % 4 == 0:
             hills_offset += scroll_direction
-        if frame_count % 2 == 0:
-            ground_offset += scroll_direction
+        ground_offset += scroll_direction   # DOUBLED: now every frame
 
     low_res.fill((0,0,0))
 
     # ── Sky & special elements per level ───────────────────────────
     if current_level == 1:
-        # Bright blue sky gradient
         for y in range(HEIGHT):
             t = y / HEIGHT
             col = (
@@ -169,13 +175,11 @@ while running:
                 int(235 + (255-235)*t)
             )
             pygame.draw.line(low_res, col, (0,y), (WIDTH,y))
-        # Yellow sun top-left
         sun_center = (40, 40)
         pygame.draw.circle(low_res, (255,255,0), sun_center, 24)
         pygame.draw.circle(low_res, (255,220,80), sun_center, 18)
 
     elif current_level == 2:
-        # Black sky + twinkling stars
         low_res.fill((0,0,0))
         current_time = pygame.time.get_ticks() * 0.001
         for x, y, base_bright, size, phase in stars:
@@ -187,11 +191,9 @@ while running:
             pygame.draw.rect(low_res, PALETTE[bright_idx], (x, y, size, size))
 
     elif current_level == 3:
-        # Solid light grey sky
         low_res.fill((211,211,211))
 
     elif current_level == 4:
-        # Red sky gradient
         for y in range(HEIGHT):
             t = y / HEIGHT
             col = (
@@ -200,7 +202,6 @@ while running:
                 int(0 + (50-0)*t)
             )
             pygame.draw.line(low_res, col, (0,y), (WIDTH,y))
-        # White moon top-right
         moon_center = (WIDTH - 50, 50)
         pygame.draw.circle(low_res, (240,240,240), moon_center, 28)
         pygame.draw.circle(low_res, (220,220,220), moon_center, 22)
