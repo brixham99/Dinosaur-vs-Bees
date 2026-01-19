@@ -25,7 +25,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.2: Bee Speed Halved All Levels")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.3: Bee Speed Symmetry (Left = Right)")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -50,7 +50,7 @@ scroll_direction = 0
 current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class
+# Bee sprite class – FIXED: same speed magnitude left & right
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -61,13 +61,18 @@ class Bee(pygame.sprite.Sprite):
         self.image = self.original_image
         self.rect = self.image.get_rect()
         self.reset_position()
-        # Halved speed ranges (base before multiplier)
-        self.vx = random.uniform(-2, -1) * speed_mult
+        
+        # Choose random SPEED magnitude, then random DIRECTION
+        base_speed = random.uniform(1.0, 2.0) * speed_mult
+        self.speed = base_speed  # absolute speed preserved across flips
+        self.vx = base_speed if random.random() < 0.5 else -base_speed  # random initial direction
         self.vy = random.uniform(-0.75, 0.75) * speed_mult
-        self.speed_mult = speed_mult  # NEW: Store for resets
         self.flip_timer = random.randint(90, 180)
         self.wander_timer = random.randint(30, 60)
-        self.flipped = False
+        self.flipped = self.vx < 0  # initial flip state based on direction
+
+        # Set initial image orientation
+        self.image = pygame.transform.flip(self.original_image, self.flipped, False)
 
     def reset_position(self):
         self.rect.x = WIDTH + random.randint(20, 100)
@@ -81,24 +86,24 @@ class Bee(pygame.sprite.Sprite):
         if self.flip_timer <= 0:
             self.flipped = not self.flipped
             self.image = pygame.transform.flip(self.original_image, self.flipped, False)
-            self.vx = -self.vx
+            self.vx = -self.vx  # reverse direction but KEEP SAME SPEED
             self.flip_timer = random.randint(90, 180)
 
         self.wander_timer -= 1
         if self.wander_timer <= 0:
-            self.vy += random.uniform(-0.5, 0.5) * self.speed_mult  # FIXED: Scale wander
-            max_vy = 2.0 * self.speed_mult
-            self.vy = max(-max_vy, min(max_vy, self.vy))
+            self.vy += random.uniform(-0.5, 0.5)
+            self.vy = max(-2.0, min(2.0, self.vy))
             self.wander_timer = random.randint(30, 60)
 
+        # Respawn if off-screen
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            # FIXED: Reverse direction on respawn, NOW scaled to level speed_mult
-            self.vx = random.uniform(-2, -1) * self.speed_mult * (self.vx / abs(self.vx))
-            self.vy = random.uniform(-0.75, 0.75) * self.speed_mult
-            self.flipped = False
-            self.image = self.original_image
+            # On respawn, keep same speed magnitude but random direction again
+            self.vx = self.speed if random.random() < 0.5 else -self.speed
+            self.vy = random.uniform(-0.75, 0.75)
+            self.flipped = self.vx < 0
+            self.image = pygame.transform.flip(self.original_image, self.flipped, False)
 
 # ────────────────────────────────────────────────────────────────
 # Create bees for current level
