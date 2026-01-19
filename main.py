@@ -64,6 +64,7 @@ class Bee(pygame.sprite.Sprite):
         # Halved speed ranges (base before multiplier)
         self.vx = random.uniform(-2, -1) * speed_mult
         self.vy = random.uniform(-0.75, 0.75) * speed_mult
+        self.speed_mult = speed_mult  # NEW: Store for resets
         self.flip_timer = random.randint(90, 180)
         self.wander_timer = random.randint(30, 60)
         self.flipped = False
@@ -85,15 +86,17 @@ class Bee(pygame.sprite.Sprite):
 
         self.wander_timer -= 1
         if self.wander_timer <= 0:
-            self.vy += random.uniform(-0.5, 0.5)
-            self.vy = max(-2.0, min(2.0, self.vy))
+            self.vy += random.uniform(-0.5, 0.5) * self.speed_mult  # FIXED: Scale wander
+            max_vy = 2.0 * self.speed_mult
+            self.vy = max(-max_vy, min(max_vy, self.vy))
             self.wander_timer = random.randint(30, 60)
 
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-2, -1) * self.vx / abs(self.vx)  # preserve direction sign
-            self.vy = random.uniform(-0.75, 0.75)
+            # FIXED: Reverse direction on respawn, NOW scaled to level speed_mult
+            self.vx = random.uniform(-2, -1) * self.speed_mult * (self.vx / abs(self.vx))
+            self.vy = random.uniform(-0.75, 0.75) * self.speed_mult
             self.flipped = False
             self.image = self.original_image
 
