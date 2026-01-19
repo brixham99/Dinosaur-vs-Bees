@@ -9,29 +9,29 @@ FPS = 60
 
 PALETTE = [
     (0,0,0),          # 0 sky fallback
-    (40,40,40),       # 1 distant peaks (darkest)
-    (60,60,60),       # 2
-    (80,80,80),       # 3
-    (100,100,100),    # 4
-    (120,120,120),    # 5 lightest peaks
-    (30,30,40),       # 6 dull twinklers
-    (180,180,220),    # 7 brighter non-twinklers
-    (255,255,255),    # 8 full white twinkle
+    (40,40,40),       # 1 distant peaks
+    (60,100,60),      # 2 dark green
+    (90,130,90),      # 3 mid green
+    (120,80,40),      # 4 brown base
+    (150,100,60),     # 5 light brown lumps
+    (30,30,40),       # 6 very dark gray – dull twinklers
+    (180,180,220),    # 7 brighter non-twinkling stars
+    (255,255,255),    # 8 full bright white – twinkle peak
     (135,206,235),    # 9 bright blue sky (level 1)
-    (211,211,211),    # 10 light grey (level 3)
+    (211,211,211),    # 10 light grey sky (level 3)
     (200,0,0),        # 11 red sky base (level 4)
     (255,255,0),      # 12 yellow sun
     (240,240,240),    # 13 white moon
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v29.1: Smooth Sharp Mountains (No Flash)")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.4: Bee Respawn Fixed")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 16, bold=True)
 
-# Global starfield (level 2 only)
+# Global starfield (only used in level 2)
 stars = []
 random.seed(42)
 for i in range(120):
@@ -42,17 +42,6 @@ for i in range(120):
     phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
     stars.append((x, y, base_bright, size, phase))
 
-# Pre-generate mountain segments (fixed randomness, no per-frame rand)
-mountain_segments = []
-random.seed(123)  # fixed seed for reproducible sharp peaks
-num_segments = 20  # enough for seamless loop
-for i in range(num_segments):
-    peak_height = random.randint(60, 120)
-    peak_offset = random.randint(40, 120)
-    left_slope = random.uniform(0.6, 1.0)
-    right_slope = random.uniform(0.6, 1.0)
-    mountain_segments.append((peak_height, peak_offset, left_slope, right_slope))
-
 frame_count = 0
 mountains_offset = 0.0
 hills_offset = 0.0
@@ -61,7 +50,7 @@ scroll_direction = 0
 current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class (unchanged from last stable)
+# Bee sprite class – FIXED: save speed_mult for respawn
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -71,7 +60,7 @@ class Bee(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        self.speed_mult = speed_mult
+        self.speed_mult = speed_mult  # saved for respawn
         self.reset_position()
         self.vx = random.uniform(-2, -1) * speed_mult
         self.vy = random.uniform(-0.75, 0.75) * speed_mult
@@ -107,7 +96,7 @@ class Bee(pygame.sprite.Sprite):
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-2, -1) * self.speed_mult
+            self.vx = random.uniform(-2, -1) * self.speed_mult  # use saved self.speed_mult
             self.vy = random.uniform(-0.75, 0.75) * self.speed_mult
             self.flipped = False
             self.image = self.original_image
@@ -168,7 +157,7 @@ while running:
             mountains_offset += scroll_direction
         if frame_count % 4 == 0:
             hills_offset += scroll_direction
-        ground_offset += scroll_direction   # doubled
+        ground_offset += scroll_direction   # doubled speed
 
     low_res.fill((0,0,0))
 
@@ -213,34 +202,17 @@ while running:
         pygame.draw.circle(low_res, (240,240,240), moon_center, 28)
         pygame.draw.circle(low_res, (220,220,220), moon_center, 22)
 
-    # ── Sharp angular procedural mountains (fixed randomness) ───────
-    mountain_base_y = 120
-    segment_width = 320
-    for layer in range(5):
-        darkness = 40 + layer * 20  # darker closer
-        layer_offset = mountains_offset * (0.25 + layer * 0.1)  # parallax depth
-        for i in range(-4, 6):  # overlap for seamless
-            segment_x = (i * segment_width + layer_offset) % (segment_width * 5) - segment_width * 2.5
-            # Use pre-generated segment data (fixed randomness)
-            seg_idx = i % len(mountain_segments)
-            peak_height, peak_offset, left_slope, right_slope = mountain_segments[seg_idx]
-            peak_x = segment_x + peak_offset
-            peak_y = mountain_base_y - peak_height * (1 - layer * 0.15)  # higher distant
+    # ── Parallax layers ────────────────────────────────────────────
+    for px in range(-80, WIDTH + 80):
+        world_x = px + mountains_offset
+        h1 = 50 * math.sin(world_x * 0.008)
+        h2 = 35 * math.sin(world_x * 0.022 + 1.2)
+        h3 = 18 * math.sin(world_x * 0.045 + 3.0)
+        mountain_y = 55 + int(h1 + h2 + h3)
+        screen_x = int(px)
+        if 0 <= screen_x < WIDTH and mountain_y < HEIGHT:
+            pygame.draw.rect(low_res, PALETTE[1], (screen_x, mountain_y, 1, HEIGHT - mountain_y))
 
-            left_x = segment_x
-            right_x = segment_x + segment_width
-            points = [
-                (left_x, mountain_base_y),
-                (peak_x, peak_y),
-                (right_x, mountain_base_y)
-            ]
-            col = (darkness, darkness, darkness)
-            pygame.draw.polygon(low_res, col, points)
-            # Thin edge for depth
-            if layer < 4:
-                pygame.draw.lines(low_res, (darkness + 40, darkness + 40, darkness + 40), False, points, 2)
-
-    # ── Green hills ────────────────────────────────────────────────
     for px in range(-80, WIDTH + 80):
         world_x = px + hills_offset
         h = 19.2 * math.sin(world_x * 0.04) + 14.4 * math.sin(world_x * 0.075 + 1.8)
@@ -250,7 +222,6 @@ while running:
         if 0 <= screen_x < WIDTH:
             pygame.draw.rect(low_res, PALETTE[col_idx], (screen_x, y, 1, HEIGHT - y + 50))
 
-    # ── Brown ground ───────────────────────────────────────────────
     for px in range(-80, WIDTH + 80):
         world_x = px + ground_offset
         lump = 4.2 * math.sin(world_x * 0.09) + 3.0 * math.cos(world_x * 0.16)
