@@ -25,7 +25,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.3: Fixed Bee Facing")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.3: Bee Init Order Fixed")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -50,7 +50,7 @@ scroll_direction = 0
 current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class – FIXED: sprite always faces travel direction
+# Bee sprite class – FIXED: reset_position called AFTER vx/vy set
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -60,21 +60,28 @@ class Bee(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        self.reset_position()
-        
-        # Random speed magnitude + direction
+
+        # Set speed and direction FIRST
         base_speed = random.uniform(1.0, 2.0) * speed_mult
         self.speed = base_speed
         direction = 1 if random.random() < 0.5 else -1
         self.vx = base_speed * direction
         self.vy = random.uniform(-0.75, 0.75) * speed_mult
+
+        # Now safe to call reset_position
+        self.reset_position()
+
         self.flip_timer = random.randint(90, 180)
         self.wander_timer = random.randint(30, 60)
-        self.flipped = (self.vx < 0)  # True = facing left (flipped sprite)
+        self.flipped = (self.vx < 0)
         self.image = pygame.transform.flip(self.original_image, self.flipped, False)
 
     def reset_position(self):
-        self.rect.x = WIDTH + random.randint(20, 100) if self.vx < 0 else -random.randint(20, 100)
+        # Spawn off right if going left (vx < 0), off left if going right
+        if self.vx < 0:
+            self.rect.x = WIDTH + random.randint(20, 100)
+        else:
+            self.rect.x = -random.randint(20, 100) - self.rect.width
         self.rect.y = random.randint(80, 180)
 
     def update(self):
@@ -85,7 +92,7 @@ class Bee(pygame.sprite.Sprite):
         if self.flip_timer <= 0:
             self.flipped = not self.flipped
             self.image = pygame.transform.flip(self.original_image, self.flipped, False)
-            self.vx = -self.vx  # reverse, keep magnitude
+            self.vx = -self.vx
             self.flip_timer = random.randint(90, 180)
 
         self.wander_timer -= 1
@@ -167,7 +174,6 @@ while running:
 
     # ── Sky & special elements per level ───────────────────────────
     if current_level == 1:
-        # Bright blue sky gradient
         for y in range(HEIGHT):
             t = y / HEIGHT
             col = (
@@ -176,13 +182,11 @@ while running:
                 int(235 + (255-235)*t)
             )
             pygame.draw.line(low_res, col, (0,y), (WIDTH,y))
-        # Yellow sun top-left
         sun_center = (40, 40)
         pygame.draw.circle(low_res, (255,255,0), sun_center, 24)
         pygame.draw.circle(low_res, (255,220,80), sun_center, 18)
 
     elif current_level == 2:
-        # Black sky + twinkling stars
         low_res.fill((0,0,0))
         current_time = pygame.time.get_ticks() * 0.001
         for x, y, base_bright, size, phase in stars:
@@ -194,11 +198,9 @@ while running:
             pygame.draw.rect(low_res, PALETTE[bright_idx], (x, y, size, size))
 
     elif current_level == 3:
-        # Solid light grey sky
         low_res.fill((211,211,211))
 
     elif current_level == 4:
-        # Red sky gradient
         for y in range(HEIGHT):
             t = y / HEIGHT
             col = (
@@ -207,7 +209,6 @@ while running:
                 int(0 + (50-0)*t)
             )
             pygame.draw.line(low_res, col, (0,y), (WIDTH,y))
-        # White moon top-right
         moon_center = (WIDTH - 50, 50)
         pygame.draw.circle(low_res, (240,240,240), moon_center, 28)
         pygame.draw.circle(low_res, (220,220,220), moon_center, 22)
