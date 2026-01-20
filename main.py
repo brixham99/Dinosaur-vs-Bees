@@ -25,13 +25,13 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v30: Dinosaur Animated & Fixed Middle")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.5: Stable Base + All Fixes")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 16, bold=True)
 
-# Global starfield (level 2 only)
+# Global starfield (only used in level 2)
 stars = []
 random.seed(42)
 for i in range(120):
@@ -42,57 +42,15 @@ for i in range(120):
     phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
     stars.append((x, y, base_bright, size, phase))
 
-# Load dinosaur sprite sheet
-dino_sheet = pygame.image.load("assets/dino-sprite-sheet.png").convert_alpha()
-FRAME_WIDTH = 1060 // 5   # 212 px
-FRAME_HEIGHT = 482 // 3   # ~160 px
-NUM_FRAMES = 13
-
-# Extract 13 frames (left-to-right, top-to-bottom)
-dino_frames = []
 frame_count = 0
-for row in range(3):
-    cols = 5 if row < 2 else 3
-    for col in range(cols):
-        frame = pygame.Surface((FRAME_WIDTH, FRAME_HEIGHT), pygame.SRCALPHA)
-        frame.blit(dino_sheet, (0, 0), (col * FRAME_WIDTH, row * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT))
-        dino_frames.append(frame)
-        frame_count += 1
-        if frame_count >= NUM_FRAMES:
-            break
-
-# Dinosaur class – fixed middle, animates, follows ground
-class Dinosaur(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.frames = dino_frames
-        self.frame_index = 0
-        self.image = self.frames[self.frame_index]
-        self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 20))  # initial
-        self.anim_timer = 0
-        self.anim_speed = 8  # frames per step – adjust for faster/slower
-
-    def update(self):
-        # Idle animation cycle
-        self.anim_timer += 1
-        if self.anim_timer >= self.anim_speed:
-            self.frame_index = (self.frame_index + 1) % NUM_FRAMES
-            self.image = self.frames[self.frame_index]
-            self.anim_timer = 0
-
-        # Feet follow current ground height at dinosaur's world x
-        screen_x = self.rect.centerx
-        world_x = screen_x + ground_offset  # dinosaur fixed on screen → convert to world coord
-        lump = 4.2 * math.sin(world_x * 0.09) + 3.0 * math.cos(world_x * 0.16)
-        ground_y = 200 + int(lump)
-        self.rect.bottom = ground_y + 5  # slight offset so feet touch ground
-
-# Create dinosaur
-dino = Dinosaur()
-all_sprites = pygame.sprite.Group(dino)
+mountains_offset = 0.0
+hills_offset = 0.0
+ground_offset = 0.0
+scroll_direction = 0
+current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class (unchanged)
+# Bee sprite class – corrected respawn + facing
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -102,13 +60,14 @@ class Bee(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        self.speed_mult = speed_mult
+        self.speed_mult = speed_mult  # saved for respawn
         self.reset_position()
         self.vx = random.uniform(-2, -1) * speed_mult
         self.vy = random.uniform(-0.75, 0.75) * speed_mult
         self.flip_timer = random.randint(90, 180)
         self.wander_timer = random.randint(30, 60)
-        self.flipped = False
+        self.flipped = (self.vx > 0)  # original faces left → flip for right
+        self.image = pygame.transform.flip(self.original_image, self.flipped, False)
 
     def reset_position(self):
         self.world_x = ground_offset + WIDTH + random.randint(20, 100)
@@ -140,8 +99,8 @@ class Bee(pygame.sprite.Sprite):
             self.reset_position()
             self.vx = random.uniform(-2, -1) * self.speed_mult
             self.vy = random.uniform(-0.75, 0.75) * self.speed_mult
-            self.flipped = False
-            self.image = self.original_image
+            self.flipped = (self.vx > 0)
+            self.image = pygame.transform.flip(self.original_image, self.flipped, False)
 
 # ────────────────────────────────────────────────────────────────
 # Create bees for current level
@@ -199,7 +158,7 @@ while running:
             mountains_offset += scroll_direction
         if frame_count % 4 == 0:
             hills_offset += scroll_direction
-        ground_offset += scroll_direction   # doubled speed
+        ground_offset += scroll_direction   # doubled speed (every frame)
 
     low_res.fill((0,0,0))
 
@@ -276,10 +235,6 @@ while running:
     # ── Bees ────────────────────────────────────────────────────────
     bees.update()
     bees.draw(low_res)
-
-    # ── Dinosaur – fixed middle, animated, feet follow ground ──────
-    all_sprites.update()
-    all_sprites.draw(low_res)
 
     # ── Level indicator ─────────────────────────────────────────────
     level_text = font.render(f"Level {current_level}", True, (255,255,255))
