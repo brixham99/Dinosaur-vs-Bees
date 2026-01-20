@@ -9,7 +9,7 @@ FPS = 60
 
 PALETTE = [
     (0,0,0),          # 0 sky fallback
-    (40,40,40),       # 1 distant peaks
+    (90,90,90),       # 1 distant peaks – lighter grey
     (60,100,60),      # 2 dark green
     (90,130,90),      # 3 mid green
     (120,80,40),      # 4 brown base
@@ -25,7 +25,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.4: Bee Respawn Fixed")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.5: Lighter Mountains + Faster Hills")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -50,7 +50,7 @@ scroll_direction = 0
 current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class – FIXED: save speed_mult for respawn
+# Bee sprite class (unchanged from v28.4)
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -60,7 +60,7 @@ class Bee(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        self.speed_mult = speed_mult  # saved for respawn
+        self.speed_mult = speed_mult
         self.reset_position()
         self.vx = random.uniform(-2, -1) * speed_mult
         self.vy = random.uniform(-0.75, 0.75) * speed_mult
@@ -96,7 +96,7 @@ class Bee(pygame.sprite.Sprite):
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-2, -1) * self.speed_mult  # use saved self.speed_mult
+            self.vx = random.uniform(-2, -1) * self.speed_mult
             self.vy = random.uniform(-0.75, 0.75) * self.speed_mult
             self.flipped = False
             self.image = self.original_image
@@ -155,9 +155,9 @@ while running:
     if scroll_direction != 0:
         if frame_count % 8 == 0:
             mountains_offset += scroll_direction
-        if frame_count % 4 == 0:
+        if frame_count % 2 == 0:   # ← changed: hills now every 2 frames (faster)
             hills_offset += scroll_direction
-        ground_offset += scroll_direction   # doubled speed
+        ground_offset += scroll_direction   # doubled speed (every frame)
 
     low_res.fill((0,0,0))
 
