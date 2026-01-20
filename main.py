@@ -25,11 +25,29 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.2 (stable)")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.3: Bee Respawn Fixed")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 16, bold=True)
+
+# Global starfield (only used in level 2)
+stars = []
+random.seed(42)
+for i in range(120):
+    x = random.randint(0, WIDTH - 1)
+    y = random.randint(0, 100)
+    base_bright = 7
+    size = random.choice([1, 1, 2])
+    phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
+    stars.append((x, y, base_bright, size, phase))
+
+frame_count = 0
+mountains_offset = 0.0
+hills_offset = 0.0
+ground_offset = 0.0
+scroll_direction = 0
+current_level = 1
 
 # ────────────────────────────────────────────────────────────────
 # Bee sprite class
@@ -42,7 +60,7 @@ class Bee(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        self.speed_mult = speed_mult
+        self.speed_mult = speed_mult  # saved for respawn
         self.reset_position()
         self.vx = random.uniform(-4, -2) * speed_mult
         self.vy = random.uniform(-1.5, 1.5) * speed_mult
@@ -74,8 +92,8 @@ class Bee(pygame.sprite.Sprite):
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-4, -2) * speed_mult
-            self.vy = random.uniform(-1.5, 1.5) * speed_mult
+            self.vx = random.uniform(-4, -2) * self.speed_mult   # FIXED: use self.speed_mult
+            self.vy = random.uniform(-1.5, 1.5) * self.speed_mult  # FIXED: use self.speed_mult
             self.flipped = False
             self.image = self.original_image
 
@@ -100,29 +118,7 @@ def create_bees_for_level(level):
         bees.add(bee)
     return bees
 
-# ────────────────────────────────────────────────────────────────
-# Global variables & initial setup
-# ────────────────────────────────────────────────────────────────
-frame_count = 0
-mountains_offset = 0.0
-hills_offset = 0.0
-ground_offset = 0.0
-scroll_direction = 0
-current_level = 1
-
-# Now safe to create initial bees
 bees = create_bees_for_level(current_level)
-
-# Global starfield (only used in level 2)
-stars = []
-random.seed(42)
-for i in range(120):
-    x = random.randint(0, WIDTH - 1)
-    y = random.randint(0, 100)
-    base_bright = 7
-    size = random.choice([1, 1, 2])
-    phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
-    stars.append((x, y, base_bright, size, phase))
 
 # ────────────────────────────────────────────────────────────────
 # Main loop
