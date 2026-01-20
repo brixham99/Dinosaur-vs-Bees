@@ -25,11 +25,16 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – v30.0: Dinosaur refinements")
+pygame.display.set_caption("Dinosaur vs Bees – v31.0: Dino feet lowered 25px")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 16, bold=True)
+
+# ────────────────────────────────────────────────────────────────
+# Dino foot offset (tweak here for perfect alignment)
+# ────────────────────────────────────────────────────────────────
+dino_foot_offset = 25
 
 # ────────────────────────────────────────────────────────────────
 # Load and prepare dinosaur frames (scaled 75%)
@@ -296,8 +301,8 @@ while running:
     lump = 4.2 * math.sin(dino_world_x * 0.09) + 3.0 * math.cos(dino_world_x * 0.16)
     ground_y = 200 + int(lump)
 
-    # Position so feet rest on ground
-    dino_screen_y = ground_y - scaled_height
+    # Position so feet rest on ground (with offset)
+    dino_screen_y = ground_y - scaled_height + dino_foot_offset
 
     # Draw dinosaur centered horizontally
     low_res.blit(current_frame, (dino_screen_x - scaled_width // 2, dino_screen_y))
