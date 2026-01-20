@@ -25,7 +25,7 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v30: Dinosaur Animated & Fixed Middle")
+pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.2 (stable)")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
@@ -42,57 +42,18 @@ for i in range(120):
     phase = random.uniform(0, 2 * math.pi) if random.random() < 0.3 else None
     stars.append((x, y, base_bright, size, phase))
 
-# Load dinosaur sprite sheet (13 frames, 5+5+3 layout)
-dino_sheet = pygame.image.load("assets/dino-sprite-sheet.png").convert_alpha()
-FRAME_WIDTH = 1060 // 5   # 212 px per frame wide
-FRAME_HEIGHT = 482 // 3   # ~160 px tall per frame
-NUM_FRAMES = 13
-
-# Extract frames (left-to-right, top-to-bottom)
-dino_frames = []
 frame_count = 0
-for row in range(3):
-    cols = 5 if row < 2 else 3
-    for col in range(cols):
-        frame = pygame.Surface((FRAME_WIDTH, FRAME_HEIGHT), pygame.SRCALPHA)
-        frame.blit(dino_sheet, (0, 0), (col * FRAME_WIDTH, row * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT))
-        dino_frames.append(frame)
-        frame_count += 1
-        if frame_count >= NUM_FRAMES:
-            break
+mountains_offset = 0.0
+hills_offset = 0.0
+ground_offset = 0.0
+scroll_direction = 0
+current_level = 1
 
-# Dinosaur class – fixed middle, animates, feet follow ground
-class Dinosaur(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.frames = dino_frames
-        self.frame_index = 0
-        self.image = self.frames[self.frame_index]
-        self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 20))  # initial guess
-        self.anim_timer = 0
-        self.anim_speed = 8  # frames per animation step (adjust for speed)
-
-    def update(self):
-        # Idle animation cycle
-        self.anim_timer += 1
-        if self.anim_timer >= self.anim_speed:
-            self.frame_index = (self.frame_index + 1) % NUM_FRAMES
-            self.image = self.frames[self.frame_index]
-            self.anim_timer = 0
-
-        # Feet follow current ground height at dinosaur's world x
-        screen_x = self.rect.centerx
-        world_x = screen_x + ground_offset  # dinosaur fixed on screen → convert to world coord
-        lump = 4.2 * math.sin(world_x * 0.09) + 3.0 * math.cos(world_x * 0.16)
-        ground_y = 200 + int(lump)
-        self.rect.bottom = ground_y + 5  # slight offset so feet touch ground
-
-# Create dinosaur
-dino = Dinosaur()
-all_sprites = pygame.sprite.Group(dino)
+# Bees created AFTER current_level is defined
+bees = create_bees_for_level(current_level)
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class (unchanged from last stable)
+# Bee sprite class
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -102,26 +63,20 @@ class Bee(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        self.speed_mult = speed_mult
         self.reset_position()
-        self.vx = random.uniform(-2, -1) * speed_mult
-        self.vy = random.uniform(-0.75, 0.75) * speed_mult
+        self.vx = random.uniform(-4, -2) * speed_mult
+        self.vy = random.uniform(-1.5, 1.5) * speed_mult
         self.flip_timer = random.randint(90, 180)
         self.wander_timer = random.randint(30, 60)
-        self.flipped = (self.vx > 0)
-        self.image = pygame.transform.flip(self.original_image, self.flipped, False)
+        self.flipped = False
 
     def reset_position(self):
-        self.world_x = ground_offset + WIDTH + random.randint(20, 100)
-        self.world_y = random.randint(80, 180)
-        self.rect.x = int(self.world_x - ground_offset)
-        self.rect.y = int(self.world_y)
+        self.rect.x = WIDTH + random.randint(20, 100)
+        self.rect.y = random.randint(80, 180)
 
     def update(self):
-        self.world_x += self.vx
-        self.world_y += self.vy
-        self.rect.x = int(self.world_x - ground_offset)
-        self.rect.y = int(self.world_y)
+        self.rect.x += self.vx
+        self.rect.y += self.vy
 
         self.flip_timer -= 1
         if self.flip_timer <= 0:
@@ -139,9 +94,9 @@ class Bee(pygame.sprite.Sprite):
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-2, -1) * self.speed_mult
-            self.vy = random.uniform(-0.75, 0.75) * self.speed_mult
-            self.flipped = (self.vx > 0)
+            self.vx = random.uniform(-4, -2) * speed_mult
+            self.vy = random.uniform(-1.5, 1.5) * speed_mult
+            self.flipped = False
             self.image = self.original_image
 
 # ────────────────────────────────────────────────────────────────
@@ -164,8 +119,6 @@ def create_bees_for_level(level):
         bee = Bee(scale=scale, speed_mult=speed_mult)
         bees.add(bee)
     return bees
-
-bees = create_bees_for_level(current_level)
 
 # ────────────────────────────────────────────────────────────────
 # Main loop
@@ -200,7 +153,8 @@ while running:
             mountains_offset += scroll_direction
         if frame_count % 4 == 0:
             hills_offset += scroll_direction
-        ground_offset += scroll_direction   # doubled speed (every frame)
+        if frame_count % 2 == 0:
+            ground_offset += scroll_direction
 
     low_res.fill((0,0,0))
 
@@ -277,10 +231,6 @@ while running:
     # ── Bees ────────────────────────────────────────────────────────
     bees.update()
     bees.draw(low_res)
-
-    # ── Dinosaur – fixed middle, animated, feet follow ground ──────
-    all_sprites.update()
-    all_sprites.draw(low_res)
 
     # ── Level indicator ─────────────────────────────────────────────
     level_text = font.render(f"Level {current_level}", True, (255,255,255))
