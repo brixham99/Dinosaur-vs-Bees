@@ -43,51 +43,56 @@ for i in range(120):
     stars.append((x, y, base_bright, size, phase))
 
 # Load dinosaur sprite sheet
-dino_sheet = pygame.image.load("assets/dine-sprite-sheet.png").convert_alpha()
-FRAME_WIDTH = 1060 // 5   # 212 px per frame wide (1060 / 5)
-FRAME_HEIGHT = 482 // 3   # ≈160 px tall per frame
+dino_sheet = pygame.image.load("assets/dino-sprite-sheet.png").convert_alpha()
+FRAME_WIDTH = 1060 // 5   # 212 px
+FRAME_HEIGHT = 482 // 3   # ~160 px
 NUM_FRAMES = 13
 
-# Extract frames (left-to-right, top-to-bottom)
+# Extract 13 frames (left-to-right, top-to-bottom)
 dino_frames = []
+frame_count = 0
 for row in range(3):
-    for col in range(5 if row < 2 else 3):
+    cols = 5 if row < 2 else 3
+    for col in range(cols):
         frame = pygame.Surface((FRAME_WIDTH, FRAME_HEIGHT), pygame.SRCALPHA)
         frame.blit(dino_sheet, (0, 0), (col * FRAME_WIDTH, row * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT))
         dino_frames.append(frame)
+        frame_count += 1
+        if frame_count >= NUM_FRAMES:
+            break
 
-# Dinosaur class – fixed middle, animates, follows ground height
+# Dinosaur class – fixed middle, animates, follows ground
 class Dinosaur(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.frames = dino_frames
         self.frame_index = 0
         self.image = self.frames[self.frame_index]
-        self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 20))  # initial guess
+        self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 20))  # initial
         self.anim_timer = 0
-        self.anim_speed = 8  # frames per animation step
+        self.anim_speed = 8  # frames per step – adjust for faster/slower
 
     def update(self):
-        # Idle animation
+        # Idle animation cycle
         self.anim_timer += 1
         if self.anim_timer >= self.anim_speed:
             self.frame_index = (self.frame_index + 1) % NUM_FRAMES
             self.image = self.frames[self.frame_index]
             self.anim_timer = 0
 
-        # Feet follow ground height at current screen x
+        # Feet follow current ground height at dinosaur's world x
         screen_x = self.rect.centerx
-        world_x = screen_x + ground_offset  # convert to world coord
+        world_x = screen_x + ground_offset  # dinosaur fixed on screen → convert to world coord
         lump = 4.2 * math.sin(world_x * 0.09) + 3.0 * math.cos(world_x * 0.16)
         ground_y = 200 + int(lump)
-        self.rect.bottom = ground_y + 5  # slight offset so feet touch
+        self.rect.bottom = ground_y + 5  # slight offset so feet touch ground
 
-# Create dino
+# Create dinosaur
 dino = Dinosaur()
 all_sprites = pygame.sprite.Group(dino)
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class (unchanged from last stable)
+# Bee sprite class (unchanged)
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -272,7 +277,7 @@ while running:
     bees.update()
     bees.draw(low_res)
 
-    # ── Dinosaur ────────────────────────────────────────────────────
+    # ── Dinosaur – fixed middle, animated, feet follow ground ──────
     all_sprites.update()
     all_sprites.draw(low_res)
 
