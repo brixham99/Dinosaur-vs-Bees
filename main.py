@@ -9,7 +9,7 @@ FPS = 60
 
 PALETTE = [
     (0,0,0),          # 0 sky fallback
-    (90,90,90),       # 1 distant peaks – lighter grey
+    (40,40,40),       # 1 distant peaks
     (60,100,60),      # 2 dark green
     (90,130,90),      # 3 mid green
     (120,80,40),      # 4 brown base
@@ -25,11 +25,27 @@ PALETTE = [
 ]
 
 pygame.init()
-pygame.display.set_caption("Dinosaur vs Bees – Parallax v28.5: Lighter Mountains + Faster Hills")
+pygame.display.set_caption("Dinosaur vs Bees – v29.0: Added Dinosaur Animation")
 low_res = pygame.Surface((WIDTH, HEIGHT))
 win = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), pygame.SCALED)
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 16, bold=True)
+
+# Load dinosaur sprite sheet and extract frames
+sprite_sheet = pygame.image.load("assets/dino-sprite-sheet.png").convert_alpha()
+dino_frames = []
+frame_width, frame_height = 212, 160
+for row in range(3):
+    cols = 5 if row < 2 else 3
+    for col in range(cols):
+        frame = sprite_sheet.subsurface((col * frame_width, row * frame_height, frame_width, frame_height))
+        dino_frames.append(frame)
+
+# Dinosaur animation variables
+dino_frame_idx = 0
+dino_anim_timer = 0
+anim_delay = 6  # Change frame every 6 ticks (~10 FPS at 60 FPS)
+dino_screen_x = WIDTH // 2
 
 # Global starfield (only used in level 2)
 stars = []
@@ -50,7 +66,7 @@ scroll_direction = 0
 current_level = 1
 
 # ────────────────────────────────────────────────────────────────
-# Bee sprite class (unchanged from v28.4)
+# Bee sprite class – FIXED: save speed_mult for respawn
 # ────────────────────────────────────────────────────────────────
 class Bee(pygame.sprite.Sprite):
     def __init__(self, scale=1.0, speed_mult=1.0):
@@ -60,7 +76,7 @@ class Bee(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
         self.image = self.original_image
         self.rect = self.image.get_rect()
-        self.speed_mult = speed_mult
+        self.speed_mult = speed_mult  # saved for respawn
         self.reset_position()
         self.vx = random.uniform(-2, -1) * speed_mult
         self.vy = random.uniform(-0.75, 0.75) * speed_mult
@@ -96,7 +112,7 @@ class Bee(pygame.sprite.Sprite):
         if self.rect.right < -20 or self.rect.left > WIDTH + 20 or \
            self.rect.top > HEIGHT + 20 or self.rect.bottom < -20:
             self.reset_position()
-            self.vx = random.uniform(-2, -1) * self.speed_mult
+            self.vx = random.uniform(-2, -1) * self.speed_mult  # use saved self.speed_mult
             self.vy = random.uniform(-0.75, 0.75) * self.speed_mult
             self.flipped = False
             self.image = self.original_image
@@ -155,9 +171,9 @@ while running:
     if scroll_direction != 0:
         if frame_count % 8 == 0:
             mountains_offset += scroll_direction
-        if frame_count % 2 == 0:   # ← changed: hills now every 2 frames (faster)
+        if frame_count % 4 == 0:
             hills_offset += scroll_direction
-        ground_offset += scroll_direction   # doubled speed (every frame)
+        ground_offset += scroll_direction   # doubled speed
 
     low_res.fill((0,0,0))
 
@@ -234,6 +250,22 @@ while running:
     # ── Bees ────────────────────────────────────────────────────────
     bees.update()
     bees.draw(low_res)
+
+    # ── Dinosaur ────────────────────────────────────────────────────
+    # Animate
+    dino_anim_timer += 1
+    if dino_anim_timer >= anim_delay:
+        dino_anim_timer = 0
+        dino_frame_idx = (dino_frame_idx + 1) % len(dino_frames)
+
+    # Calculate ground height at dino's world position
+    dino_world_x = ground_offset + dino_screen_x
+    lump = 4.2 * math.sin(dino_world_x * 0.09) + 3.0 * math.cos(dino_world_x * 0.16)
+    ground_y = 200 + int(lump)
+    dino_screen_y = ground_y - frame_height
+
+    # Draw
+    low_res.blit(dino_frames[dino_frame_idx], (dino_screen_x - frame_width // 2, dino_screen_y))
 
     # ── Level indicator ─────────────────────────────────────────────
     level_text = font.render(f"Level {current_level}", True, (255,255,255))
