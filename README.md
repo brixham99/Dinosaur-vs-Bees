@@ -1,5 +1,7 @@
 # Dinosaur vs Bees
 
+![Dinosaur vs Bees screenshot](docs/screenshot.png)
+
 Retro-style arcade game built with Python & Pygame.  
 A long-necked dinosaur defends against swarms of bees in a scrolling volcanic landscape.
 
